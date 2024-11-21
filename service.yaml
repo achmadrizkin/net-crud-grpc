@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: net_test_generator_svc
+  name: net_test_generator_svc
+  annotations:
+    secret.reloader.stakater.com/reload: "secret-net_test_generator_svc"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: net_test_generator_svc
+  strategy:
+    rollingUpdate:
+      # This should be set to 0 if we only have 1 replica defined
+      maxUnavailable: 25%    
+  template:
+    metadata:
+      labels:
+        app: net_test_generator_svc
+    spec:
+      volumes:
+      - name: appsettings-volume
+        secret:
+          secretName: secret-net_test_generator_svc
+      - name: google-cloud-key
+        secret:
+         secretName: pubsub-key
+      - name: workdir
+        emptyDir: {}
+      containers:
+      - name: net_test_generator_svc
+        image: asia.gcr.io/$NAMESPACE/net_test_generator_svc:$BUILD_NUMBER
+        readinessProbe:
+          httpGet:
+            path: /hc
+            port: 4021
+          initialDelaySeconds: 60
+          periodSeconds: 10   
+        volumeMounts:
+        - name: workdir
+          mountPath: /var/ssl
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+          readOnly: true
+        - name: appsettings-volume
+          mountPath: /app/appsettings.json
+          subPath: appsettings.json  
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/pubsub.json
+        - name: ELASTIC_APM_SERVER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: configmap-apm
+              key: ELASTIC_APM_SERVER_URL
+        - name: ELASTIC_APM_SERVICE_NAME
+          value: bbone-net-net_test_generator_svc
+        - name: ELASTIC_APM_ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: configmap-apm
+              key: ELASTIC_APM_ENVIRONMENT
+        ports:
+        - containerPort: 4021
+        - containerPort: 4022
+        - containerPort: 4023
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: net_test_generator_svc
+  labels:
+    app: net_test_generator_svc
+  annotations:
+    cloud.google.com/app-protocols: '{"grpc":"HTTP2"}'
+spec:
+  type: NodePort
+  ports:
+  - name: https
+    port: 4023
+    targetPort: 4023
+  - name: http2
+    protocol: TCP
+    port: 4022
+    targetPort: 4022  
+  - name: http
+    protocol: TCP
+    port: 4021
+    targetPort: 4021
+
+  selector:
+    app: net_test_generator_svc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: net_test_generator_svc-lb
+  labels:
+    app: net_test_generator_svc-lb
+  annotations:
+    cloud.google.com/app-protocols: '{"grpc":"HTTP2"}'
+spec:
+  clusterIP: None
+  ports:
+    - name: https
+      port: 4023
+      targetPort: 4023
+    - name: http2
+      protocol: TCP
+      port: 4022
+      targetPort: 4022
+    - name: http
+      protocol: TCP
+      port: 4021
+      targetPort: 4021
+  selector:
+    app: net_test_generator_svc

@@ -1,0 +1,39 @@
+syntax = "proto3";
+option csharp_namespace = "net_test_generator_svc.Protos";
+
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+message SiswaModel {
+	int32 Id = 1 [json_name="Id"];
+	google.protobuf.StringValue Nama = 2 [json_name="Nama"];
+	google.protobuf.StringValue Alamat = 3 [json_name="Alamat"];
+	google.protobuf.StringValue Telepon = 4 [json_name="Telepon"];
+}
+
+message resSiswaAll {
+    repeated SiswaModel list_siswa = 1;
+}
+
+message SiswaEmpty {
+}
+
+message resSiswaMessage {
+    string message = 1;
+}
+
+service SiswaGrpcService {
+	rpc Add(SiswaModel) returns (resSiswaMessage){
+	  option(google.api.http) = {
+	      post: "/v1/siswa",
+	      body:"*"
+	  };
+	}
+
+	rpc GetAll(SiswaEmpty) returns (resSiswaAll){
+	  option(google.api.http) = {
+	      get: "/v1/siswa"
+	  };
+	}
+}
