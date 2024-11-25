@@ -2,18 +2,25 @@ syntax = "proto3";
 option csharp_namespace = "net_test_generator_svc.Protos";
 
 import "google/protobuf/wrappers.proto";
-import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 
 message SiswaModel {
-	int32 Id = 1 [json_name="Id"];
-	google.protobuf.StringValue Nama = 2 [json_name="Nama"];
-	google.protobuf.StringValue Alamat = 3 [json_name="Alamat"];
-	google.protobuf.StringValue Telepon = 4 [json_name="Telepon"];
+    int32 Id = 1 [json_name="Id"];
+    google.protobuf.StringValue Nama = 2 [json_name="Nama"];
+    google.protobuf.StringValue Alamat = 3 [json_name="Alamat"];
+    google.protobuf.StringValue Telepon = 4 [json_name="Telepon"];
 }
 
 message resSiswaAll {
     repeated SiswaModel list_siswa = 1;
+}
+
+message resSiswa {
+    SiswaModel siswa = 1;
+}
+
+message SiswaId {
+    int32 Id = 1;
 }
 
 message SiswaEmpty {
@@ -24,16 +31,40 @@ message resSiswaMessage {
 }
 
 service SiswaGrpcService {
-	rpc Add(SiswaModel) returns (resSiswaMessage){
-	  option(google.api.http) = {
-	      post: "/v1/siswa",
-	      body:"*"
-	  };
-	}
+    // Add a new Siswa
+    rpc Add(SiswaModel) returns (resSiswaMessage) {
+        option (google.api.http) = {
+            post: "/v1/siswa",
+            body: "*"
+        };
+    }
 
-	rpc GetAll(SiswaEmpty) returns (resSiswaAll){
-	  option(google.api.http) = {
-	      get: "/v1/siswa"
-	  };
-	}
+    // Get all Siswa
+    rpc GetAll(SiswaEmpty) returns (resSiswaAll) {
+        option (google.api.http) = {
+            get: "/v1/siswa"
+        };
+    }
+
+    // Get a specific Siswa by ID
+    rpc Get(SiswaId) returns (resSiswa) {
+        option (google.api.http) = {
+            get: "/v1/siswa/{Id}"
+        };
+    }
+
+    // Update a Siswa
+    rpc Update(SiswaModel) returns (resSiswaMessage) {
+        option (google.api.http) = {
+            put: "/v1/siswa/{Id}",
+            body: "*"
+        };
+    }
+
+    // Delete a Siswa
+    rpc Delete(SiswaId) returns (resSiswaMessage) {
+        option (google.api.http) = {
+            delete: "/v1/siswa/{Id}"
+        };
+    }
 }

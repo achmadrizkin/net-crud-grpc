@@ -9,8 +9,11 @@ namespace net_test_generator_svc.UseCases
 	public interface ISiswaUseCase
 	{
 		Task<Protos.resSiswaMessage> Add(Protos.SiswaModel o, ServerCallContext context);
-		Task<Protos.SiswaModel> GetByCode(string code, ServerCallContext context);
 		Task<Protos.resSiswaAll> GetAll(Protos.SiswaEmpty o, ServerCallContext context);
+
+		Task<Protos.resSiswa> Get(Protos.SiswaId o, ServerCallContext context);
+		Task<Protos.resSiswaMessage> Update(Protos.SiswaModel o, ServerCallContext context);
+		Task<Protos.resSiswaMessage> Delete(Protos.SiswaId o, ServerCallContext context);
 	}
 	public class SiswaUseCase : ISiswaUseCase
 	{
@@ -48,7 +51,6 @@ namespace net_test_generator_svc.UseCases
 				throw;
 			}
 		}
-
 		public async Task<Protos.resSiswaAll> GetAll(Protos.SiswaEmpty o, ServerCallContext context)
 		{
 			try
@@ -72,10 +74,70 @@ namespace net_test_generator_svc.UseCases
 			}
 		}
 
-
-		public Task<SiswaModel> GetByCode(string code, ServerCallContext context)
+		public async Task<Protos.resSiswaMessage> Update(Protos.SiswaModel o, ServerCallContext context)
 		{
-			throw new NotImplementedException();
+			try
+			{
+				var updatedSiswa = _mapper.Map<Models.Siswa>(o);
+
+				var validationResult = await _validator.ValidateAsync(updatedSiswa);
+				if (!validationResult.IsValid)
+				{
+					throw new RpcException(new Status(StatusCode.InvalidArgument, "Validation failed"));
+				}
+
+				var siswa = await _repo.db().Update(updatedSiswa);
+				return new Protos.resSiswaMessage { Message = $"Siswa with ID {siswa.Id} updated successfully" };
+			}
+			catch (KeyNotFoundException ex)
+			{
+				throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+			}
+			catch (Exception ex)
+			{
+				throw new RpcException(new Status(StatusCode.Internal, ex.Message));
+			}
+		}
+
+		public async Task<Protos.resSiswaMessage> Delete(Protos.SiswaId o, ServerCallContext context)
+		{
+			try
+			{
+				var siswa = await _repo.db().Get(new Models.Siswa { Id = o.Id }); // Ensure the record exists
+				await _repo.db().Delete(siswa);
+				return new Protos.resSiswaMessage { Message = $"Siswa with ID {o.Id} deleted successfully" };
+			}
+			catch (KeyNotFoundException ex)
+			{
+				throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+			}
+			catch (Exception ex)
+			{
+				throw new RpcException(new Status(StatusCode.Internal, ex.Message));
+			}
+		}
+
+		public async Task<Protos.resSiswa> Get(Protos.SiswaId o, ServerCallContext context)
+		{
+			try
+			{
+				// Fetch the Siswa record from the database
+				var siswa = await _repo.db().Get(new Models.Siswa { Id = o.Id });
+
+				// Map the data model to the Protos response format
+				var protoSiswa = _mapper.Map<Protos.SiswaModel>(siswa);
+
+				// Return the response
+				return new Protos.resSiswa { Siswa = protoSiswa };
+			}
+			catch (KeyNotFoundException ex)
+			{
+				throw new RpcException(new Status(StatusCode.NotFound, ex.Message));
+			}
+			catch (Exception ex)
+			{
+				throw new RpcException(new Status(StatusCode.Internal, ex.Message));
+			}
 		}
 	}
 }

@@ -11,9 +11,8 @@ namespace net_test_generator_svc.Repositories.MySql
 		Task<Models.Siswa> Add(Models.Siswa o);
 		Task<Models.Siswa> Update(Models.Siswa o);
 		Task<Models.Siswa> Delete(Models.Siswa o);
-		Task<Models.Siswa> GetByCode(string code);
 		Task<List<Models.Siswa>> GetAll();
-		Task<List<Models.Siswa>> GetByPage(Models.Siswa o, int page, int pageSize, int totalRec);
+		Task<Models.Siswa> Get(Models.Siswa o);
 	}
 
 	public class SiswaDb : ISiswaDb
@@ -22,7 +21,7 @@ namespace net_test_generator_svc.Repositories.MySql
 		string table = "mst_siswa";
 		string fields = "Id ,Nama ,Alamat ,Telepon ";
 		string fields_insert = "@Id ,@Nama ,@Alamat ,@Telepon ";
-		string fields_update = "Nama = @Nama, Alamat = @Alamat, Telepon = @Telepon where Id = @Id";
+		string fields_update = "Nama = @Nama, Alamat = @Alamat, Telepon = @Telepon";
 
 		#endregion
 
@@ -55,23 +54,35 @@ namespace net_test_generator_svc.Repositories.MySql
 				throw;
 			}
 		}
+
 		public async Task<Models.Siswa> Update(Models.Siswa o)
 		{
-			var dt = DateTime.UtcNow;
-			string sqlQuery = $"update {table} set {fields_update}";
+			string sqlQuery = $"UPDATE {table} SET {fields_update} WHERE Id = @Id";
 			try
 			{
-				_ = await _conn.ExecuteAsync(sqlQuery, new
+				var result = await _conn.ExecuteAsync(sqlQuery, new
 				{
-					Id = o.Id
+					Id = o.Id,
+					Nama = o.Nama,   // Ensure compatibility with Google Protobuf.StringValue
+					Alamat = o.Alamat,
+					Telepon = o.Telepon
 				});
+
+				if (result == 0) // If no rows are affected
+				{
+					throw new KeyNotFoundException($"Siswa with ID {o.Id} not found.");
+				}
+
 				return o;
 			}
-			catch
+			catch (Exception ex)
 			{
-				throw;
+				// Log exception if logging is implemented
+				throw new Exception("Error updating Siswa record", ex);
 			}
 		}
+
+
 		public async Task<Models.Siswa> Delete(Models.Siswa o)
 		{
 			var dt = DateTime.UtcNow;
@@ -90,11 +101,6 @@ namespace net_test_generator_svc.Repositories.MySql
 			}
 		}
 
-		public async Task<Models.Siswa> GetByCode(string code)
-		{
-			throw new NotImplementedException();
-		}
-
 		public async Task<List<Models.Siswa>> GetAll()
 		{
 			string sqlQuery = $"SELECT {fields} FROM {table}";
@@ -110,10 +116,28 @@ namespace net_test_generator_svc.Repositories.MySql
 			}
 		}
 
-
-		public async Task<List<Models.Siswa>> GetByPage(Models.Siswa o, int page, int pageSize, int totalRec)
+		public async Task<Models.Siswa> Get(Siswa o)
 		{
-			throw new NotImplementedException();
+			string sqlQuery = $"SELECT {fields} FROM {table} WHERE Id = @Id";
+			try
+			{
+				var result = await _conn.QueryFirstOrDefaultAsync<Models.Siswa>(sqlQuery, new
+				{
+					Id = o.Id
+				});
+
+				if (result == null)
+				{
+					throw new KeyNotFoundException($"Siswa with ID {o.Id} not found.");
+				}
+
+				return result;
+			}
+			catch (Exception ex)
+			{
+				// Log exception (if logging is implemented)
+				throw new Exception($"Error fetching Siswa with ID {o.Id}", ex);
+			}
 		}
 	}
 }

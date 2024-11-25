@@ -52,6 +52,63 @@ namespace net_test_generator_svc.Services
 			}
 		}
 
+		public override async Task<resSiswaMessage> Update(SiswaModel request, ServerCallContext context)
+		{
+			try
+			{
+				// Log the operation start
+				SDLogging.Log("Starting Update operation.");
+
+				// Perform the update via UseCase
+				var response = await _uc.Update(request, context);
+
+				SDLogging.Log("Update operation completed successfully.");
+				return response;
+			}
+			catch (RpcException ex)
+			{
+				SDLogging.Log($"Update failed: {ex.Message}", SDLogging.ERROR);
+				throw;
+			}
+		}
+
+		public override async Task<resSiswaMessage> Delete(SiswaId request, ServerCallContext context)
+		{
+			try
+			{
+				// Log the operation start
+				SDLogging.Log("Starting Delete operation.");
+
+				// Perform the delete via UseCase
+				var response = await _uc.Delete(request, context);
+
+				SDLogging.Log("Delete operation completed successfully.");
+				return response;
+			}
+			catch (RpcException ex)
+			{
+				SDLogging.Log($"Delete failed: {ex.Message}", SDLogging.ERROR);
+				throw;
+			}
+		}
+
+		public override async Task<resSiswa> Get(SiswaId request, ServerCallContext context)
+		{
+			try
+			{
+				SDLogging.Log($"Fetching Siswa with ID: {request.Id}");
+
+				var response = await _uc.Get(request, context);
+
+				SDLogging.Log($"Siswa with ID {request.Id} fetched successfully.");
+				return response;
+			}
+			catch (RpcException ex)
+			{
+				SDLogging.Log($"Error fetching Siswa with ID {request.Id}: {ex.Message}", SDLogging.ERROR);
+				throw;
+			}
+		}
 
 		// Get all Siswa records
 		public async override Task<resSiswaAll> GetAll(SiswaEmpty request, ServerCallContext context)
