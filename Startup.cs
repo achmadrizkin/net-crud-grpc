@@ -36,8 +36,8 @@ namespace net_test_generator_svc
         {
             //Setting for dapper
             Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-			
-			services.Configure<EmailSettings>(Configuration.GetSection("EmailSettings"));
+
+            services.Configure<EmailSettings>(Configuration.GetSection("EmailSettings"));
             services.AddTransient<IEmailService, EmailService>();
 
             #region Register client api rest / grpc
@@ -53,28 +53,40 @@ namespace net_test_generator_svc
             #region Redis Configuration
             services.AddStackExchangeRedisCache(options =>
             {
-                options.ConfigurationOptions = new StackExchange.Redis.ConfigurationOptions()
+                // Retrieve Redis settings from the configuration
+                var connectionString = Configuration.GetValue<string>("CacheSettings:ConnectionString");
+                var redisPassword = Configuration.GetValue<string>("CacheSettings:Password");
+
+                if (string.IsNullOrWhiteSpace(connectionString))
                 {
-                    EndPoints = { Configuration.GetValue<string>("CacheSettings:ConnectionString") },
-                    DefaultDatabase = Configuration.GetValue<int>("CacheSettings:Database"),
-					User = Configuration.GetValue<string>("CacheSettings:User"), 
-                    Password = Configuration.GetValue<string>("CacheSettings:Password"), 
-                    Ssl = false
+                    throw new ArgumentNullException("CacheSettings:ConnectionString", "Redis connection string cannot be null or empty.");
+                }
+
+                // Build Redis configuration options
+                var redisOptions = new StackExchange.Redis.ConfigurationOptions
+                {
+                    EndPoints = { connectionString }, // Use the specified connection string
+                    Password = redisPassword,        // Use the specified password
+                    Ssl = false                      // SSL disabled for local development
                 };
+
+                // Assign the constructed configuration options
+                options.ConfigurationOptions = redisOptions;
             });
             #endregion
 
+
             #region IOC Register
             services.AddScoped<IDbConnectionFactory>(_ => new Config.MySql.DbConnectionFactory(Configuration.GetValue<string>("DatabaseSettings:ConnectionString")));
-            
+
             //ResClient dan GRPC Client IOC tidak perlu ditambahkan
 
             //services.AddSingleton<IDriverPubSub, UpdateDriverPubSub>();
-            			services.AddScoped<ISiswaDb, SiswaDb>();
-			services.AddScoped<ISiswaCache, SiswaCache>();
-			services.AddScoped<ISiswaRepository, SiswaRepository>();
-			services.AddScoped<ISiswaUseCase, SiswaUseCase>();
-			services.AddScoped<IValidator<Siswa>, SiswaValidator>();
+            services.AddScoped<ISiswaDb, SiswaDb>();
+            services.AddScoped<ISiswaCache, SiswaCache>();
+            services.AddScoped<ISiswaRepository, SiswaRepository>();
+            services.AddScoped<ISiswaUseCase, SiswaUseCase>();
+            services.AddScoped<IValidator<Siswa>, SiswaValidator>();
 
 
 
@@ -140,7 +152,7 @@ namespace net_test_generator_svc
             app.UseEndpoints(endpoints =>
             {
                 #region Service Register
-                			endpoints.MapGrpcService<SiswaService>();
+                endpoints.MapGrpcService<SiswaService>();
 
                 //endpoints.MapGrpcService<OrganizationService>();
 

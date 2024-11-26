@@ -12,6 +12,7 @@ namespace net_test_generator_svc.Repositories.Cache
 	    Task<Siswa> GetCache(string id);
 	    Task<List<Siswa>> GetCaches();
 	    Task<bool> Clear();
+		Task<bool> ClearSiswa(int SiswaId);
 	}
 
 public class SiswaCache : ISiswaCache
@@ -26,6 +27,12 @@ public class SiswaCache : ISiswaCache
 	{
 	    await _cache.RemoveAsync("l-Siswa-cache");
 	    await _cache.RemoveAsync("Siswa.*");
+	    return true;
+	}
+
+	public async Task<bool> ClearSiswa(int SiswaId)
+	{
+		await _cache.RemoveAsync($"Siswa.{SiswaId}");
 	    return true;
 	}
 
